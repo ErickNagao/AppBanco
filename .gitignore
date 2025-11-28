@@ -1,0 +1,35 @@
+# Build output
+/bin/
+*.class
+
+# Maven/Gradle
+/target/
+/build/
+/.gradle/
+
+# Eclipse/IntelliJ/VSCode
+/.idea/
+*.iml
+.classpath
+.project
+.settings/
+/.vscode/
+
+# Packages
+*.jar
+*.war
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Files with secrets/env
+.env
+.env.*
+
+# Transaction export (optional) - common names
+transactions.csv
