@@ -38,14 +38,4 @@ public class Transaction {
                 toAccount == null ? "" : toAccount.toString(),
                 balanceAfter, description == null ? "" : description.replace(',', ' '));
     }
-
-    @Override
-    public String toString() {
-        DateTimeFormatter f = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        return String.format("[%s] %s R$ %.2f from:%s to:%s => saldo: R$ %.2f %s",
-            timestamp.format(f), type, amount,
-            fromAccount == null ? "-" : fromAccount.toString(),
-            toAccount == null ? "-" : toAccount.toString(),
-            balanceAfter, description == null ? "" : ("(" + description + ")"));
-    }
 }
