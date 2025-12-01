@@ -33,7 +33,6 @@ public class Transaction {
     public String toCsvLine() {
         DateTimeFormatter f = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String ts = timestamp.format(f);
-        // Use Locale.US to ensure decimal point is "." in CSV (avoids comma as decimal separator)
         return String.format(java.util.Locale.US, "%s,%s,%.2f,%s,%s,%.2f,%s", ts, type, amount,
                 fromAccount == null ? "" : fromAccount.toString(),
                 toAccount == null ? "" : toAccount.toString(),

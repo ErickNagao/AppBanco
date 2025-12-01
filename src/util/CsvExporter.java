@@ -11,7 +11,6 @@ public class CsvExporter {
         try (FileWriter fw = new FileWriter(path)) {
             fw.write("timestamp,type,amount,fromAccount,toAccount,balanceAfter,description\n");
             for (Transaction t : transactions) {
-                // Pulamos eventos de criação de conta — queremos apenas transações financeiras
                 if (t.getType() != null && t.getType().equalsIgnoreCase("CREATE")) continue;
                 fw.write(t.toCsvLine() + "\n");
             }
