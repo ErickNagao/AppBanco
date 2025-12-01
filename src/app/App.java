@@ -147,6 +147,7 @@ public class App {
                     case "4": transferLogged(sc, logged); break;
                     case "5": exportCsv(sc); break;
                     case "6": listAccounts(); break;
+                    case "7": viewBalanceLogged(logged); break;
                     case "9": System.out.println("Logout..."); return;
                     case "0": System.out.println("Saindo..."); System.exit(0); break;
                     default: System.out.println("Opção inválida");
@@ -166,6 +167,7 @@ public class App {
         System.out.println("4 - Transferência");
         System.out.println("5 - Exportar histórico (CSV)");
         System.out.println("6 - Listar contas");
+        System.out.println("7 - Ver saldo atual");
         System.out.println("9 - Logout");
         System.out.println("0 - Sair do aplicativo");
     }
@@ -240,5 +242,9 @@ public class App {
         for (Account a : bank.listAccounts()) {
             System.out.println(a.summary());
         }
+    }
+
+    private static void viewBalanceLogged(Account logged) {
+        System.out.printf("Saldo atual da conta %d: R$ %.2f%n", logged.getAccountNumber(), logged.getBalance());
     }
 }
