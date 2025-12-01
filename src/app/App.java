@@ -10,7 +10,7 @@ public class App {
     public static void main(String[] args) {
         Bank bank = new Bank();
         AuthService auth = new AuthService(bank);
-        AuthController authCtrl = new AuthController(bank, auth);
+        AuthController authCtrl = new AuthController(auth);
         AccountController accCtrl = new AccountController(bank);
 
         Scanner sc = new Scanner(System.in);

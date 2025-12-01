@@ -4,14 +4,10 @@ import java.util.Scanner;
 
 import model.Account;
 import service.AuthService;
-import service.Bank;
 
 public class AuthController {
-    private final Bank bank;
     private final AuthService auth;
-
-    public AuthController(Bank bank, AuthService auth) {
-        this.bank = bank;
+    public AuthController(AuthService auth) {
         this.auth = auth;
     }
 
