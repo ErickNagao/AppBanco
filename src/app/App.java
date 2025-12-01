@@ -57,7 +57,7 @@ public class App {
             double init;
             while (true) {
                 System.out.print("Depósito inicial: ");
-                String s = sc.nextLine().trim();
+                String s = sc.nextLine().trim().replace(',', '.');
                 try {
                     init = Double.parseDouble(s);
                     if (init < 0) {
@@ -82,7 +82,7 @@ public class App {
             double limit;
             while (true) {
                 System.out.print("Limite: ");
-                String s = sc.nextLine().trim();
+                String s = sc.nextLine().trim().replace(',', '.');
                 try {
                     limit = Double.parseDouble(s);
                     if (limit < 0) {
@@ -173,28 +173,88 @@ public class App {
     }
 
     private static void depositLogged(Scanner sc, Account logged) {
-        System.out.print("Valor: ");
-        double v = Double.parseDouble(sc.nextLine());
-        OperationResult res = bank.deposit(logged.getAccountNumber(), v);
-        System.out.println(res.getMessage());
+        while (true) {
+            System.out.print("Valor: ");
+            String s = sc.nextLine().trim().replace(',', '.');
+            double v;
+            try {
+                v = Double.parseDouble(s);
+                if (v <= 0) { System.out.println("Valor inválido. Informe um número maior que zero."); continue; }
+            } catch (NumberFormatException e) {
+                System.out.println("Entrada inválida. Informe um número (ex: 1000.50)." );
+                continue;
+            }
+            OperationResult res = bank.deposit(logged.getAccountNumber(), v);
+            System.out.println(res.getMessage());
+            break;
+        }
     }
 
     private static void withdrawLogged(Scanner sc, Account logged) {
-        System.out.print("Valor: ");
-        double v = Double.parseDouble(sc.nextLine());
-        System.out.print("Senha: ");
-        String pwd = sc.nextLine();
-        OperationResult res = bank.withdraw(logged.getAccountNumber(), v, pwd);
-        System.out.println(res.getMessage());
+        while (true) {
+            double v;
+            while (true) {
+                System.out.print("Valor: ");
+                String s = sc.nextLine().trim().replace(',', '.');
+                try {
+                    v = Double.parseDouble(s);
+                    if (v <= 0) { System.out.println("Valor inválido. Informe um número maior que zero."); continue; }
+                    break;
+                } catch (NumberFormatException e) {
+                    System.out.println("Entrada inválida. Informe um número (ex: 250.00)." );
+                }
+            }
+            String pwd;
+            while (true) {
+                System.out.print("Senha: ");
+                pwd = sc.nextLine();
+                if (logged.checkPassword(pwd)) break;
+                System.out.println("Senha inválida.");
+            }
+            OperationResult res = bank.withdraw(logged.getAccountNumber(), v, pwd);
+            if (res.isSuccess()) {
+                System.out.println(res.getMessage());
+                break;
+            }
+            if ("INSUFFICIENT_FUNDS".equals(res.getCode()) || "LIMIT_EXCEEDED".equals(res.getCode())) {
+                System.out.println(res.getMessage());
+                System.out.print("Deseja informar outro valor? (s/n): ");
+                String yn = sc.nextLine().trim().toLowerCase();
+                if (yn.equals("s") || yn.equals("y")) continue;
+                else break;
+            } else if ("INVALID_PASSWORD".equals(res.getCode())) {
+                System.out.println("Senha inválida.");
+                continue;
+            } else {
+                System.out.println(res.getMessage());
+                break;
+            }
+        }
     }
 
     private static void changeLimitLogged(Scanner sc, Account logged) {
-        System.out.print("Novo limite: ");
-        double lim = Double.parseDouble(sc.nextLine());
-        System.out.print("Senha: ");
-        String pwd = sc.nextLine();
-        OperationResult res = bank.changeLimit(logged.getAccountNumber(), lim, pwd);
-        System.out.println(res.getMessage());
+        while (true) {
+            System.out.print("Novo limite: ");
+            String s = sc.nextLine().trim().replace(',', '.');
+            double lim;
+            try {
+                lim = Double.parseDouble(s);
+                if (lim < 0) { System.out.println("Valor inválido. O limite não pode ser negativo."); continue; }
+            } catch (NumberFormatException e) {
+                System.out.println("Entrada inválida. Informe um número (ex: 500.00)." );
+                continue;
+            }
+            String pwd;
+            while (true) {
+                System.out.print("Senha: ");
+                pwd = sc.nextLine();
+                if (logged.checkPassword(pwd)) break;
+                System.out.println("Senha inválida.");
+            }
+            OperationResult res = bank.changeLimit(logged.getAccountNumber(), lim, pwd);
+            System.out.println(res.getMessage());
+            break;
+        }
     }
 
     private static void transferLogged(Scanner sc, Account logged) {
@@ -207,24 +267,59 @@ public class App {
                 continue;
             }
             to = Integer.parseInt(s);
+            Account dest = bank.find(to);
+            if (dest == null) {
+                System.out.println("Conta destino não encontrada.");
+                continue;
+            }
+            if (to == logged.getAccountNumber()) {
+                System.out.println("Conta destino igual à conta de origem (não permitido).");
+                continue;
+            }
             break;
         }
-        double v;
         while (true) {
-            System.out.print("Valor: ");
-            String s = sc.nextLine().trim();
-            try {
-                v = Double.parseDouble(s);
-                if (v <= 0) { System.out.println("Valor inválido. Informe um número maior que zero."); continue; }
+            double v;
+            while (true) {
+                System.out.print("Valor: ");
+                String s = sc.nextLine().trim().replace(',', '.');
+                try {
+                    v = Double.parseDouble(s);
+                    if (v <= 0) { System.out.println("Valor inválido. Informe um número maior que zero."); continue; }
+                    break;
+                } catch (NumberFormatException e) {
+                    System.out.println("Entrada inválida. Informe um número (ex: 250.00).");
+                }
+            }
+            String pwd;
+            while (true) {
+                System.out.print("Senha: ");
+                pwd = sc.nextLine();
+                if (logged.checkPassword(pwd)) break;
+                System.out.println("Senha inválida.");
+            }
+
+            OperationResult res = bank.transfer(logged.getAccountNumber(), to, v, pwd);
+            if (res.isSuccess()) {
+                System.out.println(res.getMessage());
                 break;
-            } catch (NumberFormatException e) {
-                System.out.println("Entrada inválida. Informe um número (ex: 250.00).");
+            }
+            if ("VALIDATION_ERRORS".equals(res.getCode()) && !res.getDetails().isEmpty()) {
+                System.out.println("Foram encontrados os seguintes problemas:");
+                for (String d : res.getDetails()) System.out.println(" - " + d);
+                System.out.print("Deseja corrigir o valor e tentar novamente? (s/n): ");
+                String yn = sc.nextLine().trim().toLowerCase();
+                if (yn.equals("s") || yn.equals("y")) {
+                    continue;
+                } else {
+                    System.out.println(res.getMessage());
+                    break;
+                }
+            } else {
+                System.out.println(res.getMessage());
+                break;
             }
         }
-        System.out.print("Senha: ");
-        String pwd = sc.nextLine();
-        OperationResult res = bank.transfer(logged.getAccountNumber(), to, v, pwd);
-        System.out.println(res.getMessage());
     }
 
     private static void exportCsv(Scanner sc) {
