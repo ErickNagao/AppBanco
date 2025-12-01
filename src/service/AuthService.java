@@ -9,7 +9,7 @@ public class AuthService {
         this.bank = bank;
     }
 
-    public Account register(String agency, String client, double initialDeposit, double limit, String type, String password) {
+    public Account register(String agency, String client, double initialDeposit, double limit, model.AccountType type, String password) {
         if (client == null || !client.matches(".*\\p{L}.*")) {
             throw new IllegalArgumentException("Nome do cliente inválido. Deve conter letras e não ser apenas números.");
         }

@@ -8,10 +8,10 @@ public abstract class Account {
     protected String client;
     protected double balance;
     protected double limit;
-    protected String type;
+    protected AccountType type;
     protected String password;
 
-    public Account(int accountNumber, String agency, String client, double initialDeposit, double limit, String type, String password) {
+    public Account(int accountNumber, String agency, String client, double initialDeposit, double limit, AccountType type, String password) {
         this.accountNumber = accountNumber;
         this.agency = agency;
         this.client = client;
@@ -26,7 +26,7 @@ public abstract class Account {
     public String getClient() { return client; }
     public double getBalance() { return balance; }
     public double getLimit() { return limit; }
-    public String getType() { return type; }
+    public AccountType getType() { return type; }
 
     public void deposit(double amount) {
         if (amount <= 0) throw new IllegalArgumentException("Valor de depósito deve ser positivo");

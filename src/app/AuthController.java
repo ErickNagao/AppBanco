@@ -20,13 +20,12 @@ public class AuthController {
         String client = InputUtils.readClientName(sc);
         double init = InputUtils.readDoubleNonNegative(sc, "Depósito inicial: ");
         System.out.println("Tipos disponíveis: 1) Corrente  2) Poupança  3) Salário");
-        String type = "Corrente";
+        model.AccountType type = null;
         while (true) {
             System.out.print("Escolha o tipo (1-3): ");
             String t = sc.nextLine().trim();
-            if (t.equals("1")) { type = "Corrente"; break; }
-            if (t.equals("2")) { type = "Poupança"; break; }
-            if (t.equals("3")) { type = "Salário"; break; }
+            type = model.AccountType.fromCode(t);
+            if (type != null) break;
             System.out.println("Opção inválida. Escolha 1, 2 ou 3.");
         }
         double limit = InputUtils.readDoubleNonNegative(sc, "Limite: ");

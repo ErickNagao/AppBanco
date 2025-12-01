@@ -17,7 +17,7 @@ public class Bank {
     private List<Transaction> transactions = new ArrayList<>();
     private int nextAccountNumber = 1001;
 
-    public synchronized Account createAccount(String agency, String client, double initialDeposit, double limit, String type, String password) {
+    public synchronized Account createAccount(String agency, String client, double initialDeposit, double limit, model.AccountType type, String password) {
         int accNum = nextAccountNumber++;
         Account acc = new CheckingAccount(accNum, agency, client, initialDeposit, limit, type, password);
         accounts.put(accNum, acc);

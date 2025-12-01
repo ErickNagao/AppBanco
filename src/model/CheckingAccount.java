@@ -1,7 +1,7 @@
 package model;
 
 public class CheckingAccount extends Account {
-    public CheckingAccount(int accountNumber, String agency, String client, double initialDeposit, double limit, String type, String password) {
+    public CheckingAccount(int accountNumber, String agency, String client, double initialDeposit, double limit, model.AccountType type, String password) {
         super(accountNumber, agency, client, initialDeposit, limit, type, password);
     }
 
