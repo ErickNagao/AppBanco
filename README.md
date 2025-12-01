@@ -8,6 +8,7 @@ Aplicação em Java que simula operações bancárias básicas via terminal. Pro
 
 - Cadastro de conta com: agência (numérica), tipo (Corrente / Poupança / Salário), nome do cliente, depósito inicial, limite e senha.
 - Login por agência + número da conta.
+- Ver Saldo (opção no menu logado).
 - Depósito (não exige senha).
 - Saque: exige senha; não permite saldo negativo; respeita limite por operação.
 - Alteração de limite: exige senha.
@@ -18,8 +19,8 @@ Aplicação em Java que simula operações bancárias básicas via terminal. Pro
 
 ## Estrutura do projeto
 
-- `src/app` — interface de linha de comando (`App.java`).
-- `src/model` — entidades: `Account`, `CheckingAccount`, `Transaction`.
+- `src/app` — interface de linha de comando e controllers (`App.java`, `AuthController`, `AccountController`, `InputUtils`).
+- `src/model` — entidades: `Account` (usa `AccountType`), `CheckingAccount`, `Transaction`.
 - `src/service` — lógica de domínio: `Bank`, `AuthService`.
 - `src/util` — utilitários: `CsvExporter`, `OperationResult`.
 - `bin` — saída de compilação (artefatos `.class`).
@@ -65,11 +66,11 @@ Dicas rápidas de validação durante o uso:
 - Senha: necessária para saque, alteração de limite e transferência.
 - Saque: não permite saldo negativo — só é permitido se `valor <= saldo` e `valor <= limite`.
  - Transferência: não permite transferir para a própria conta; exige senha; verifica saldo e limite; entre 00:00 e 06:00 bloqueia transferências com valor > R$1.000,00.
- - Exportação: CSV com colunas (timestamp,type,amount,fromAccount,toAccount,balanceAfter,description).
-     - Observação: o arquivo contém somente transações financeiras (depósitos, saques, transferências e alterações de limite). Eventos de criação de conta (`CREATE`) são excluídos do CSV.
+ - Exportação: CSV com colunas (Data/Hora,Tipo,Valor,Conta Origem,Conta Destino,Saldo Após,Descrição).
+     - Observação: o arquivo contém somente transações financeiras (depósitos, saques, transferências). Eventos de criação de conta (`CREATE`) são excluídos do CSV.
 
 Outras notas de implementação e comportamento:
-- As operações do `Bank` retornam um `OperationResult` que contém `success` (boolean), `code` (string) e `message` (string). A camada de apresentação (`App`) exibe `message` ao usuário.
+- As operações do `Bank` retornam um `OperationResult` que contém `success` (boolean), `code` (string), `message` (string) e, quando aplicável, uma lista `details` com todas as violações encontradas.
 - Mensagens de erro específicas (exemplos): `INSUFFICIENT_FUNDS`, `LIMIT_EXCEEDED`, `INVALID_PASSWORD`, `HOURLY_CAP`, `ACCOUNT_NOT_FOUND`, `SAME_ACCOUNT`.
 - Atualmente as senhas são armazenadas em texto simples na memória (campo `password` em `Account`). Recomendação: migrar para hashing (bcrypt) antes de usar em produção.
 
@@ -79,13 +80,49 @@ Outras notas de implementação e comportamento:
 
 ```mermaid
 classDiagram
+    class App {
+        +main()
+    }
+
+    class AuthController {
+        +doRegister()
+        +doLogin()
+    }
+
+    class AccountController {
+        +showMenu()
+        +viewBalance()
+        +deposit()
+        +withdraw()
+        +transfer()
+        +changeLimit()
+        +exportCsv()
+    }
+
+    class InputUtils {
+        +readAgency()
+        +readAccountNumber()
+        +readPositiveDouble()
+        +readPassword()
+    }
+
+    class Bank {
+        +createAccount(agency,client,init,limit,AccountType,password)
+        +find(accountNumber)
+        +deposit(acc,amount)
+        +withdraw(acc,amount,password)
+        +changeLimit(acc,newLimit,password)
+        +transfer(from,to,amount,password) : OperationResult
+        +getTransactions()
+    }
+
     class Account {
         +int accountNumber
         +String agency
         +String client
         +double balance
         +double limit
-        +String type
+        +AccountType type
         +String password
         +deposit(amount)
         +withdraw(amount)
@@ -94,17 +131,6 @@ classDiagram
 
     class CheckingAccount {
         +withdraw(amount)
-    }
-
-    class Bank {
-        +createAccount(agency,client,init,limit,type,password)
-        +find(accountNumber)
-        +deposit(acc,amount)
-        +withdraw(acc,amount,password)
-        +changeLimit(acc,newLimit,password)
-        +transfer(from,to,amount,password)
-        +getTransactions()
-        +listAccounts()
     }
 
     class Transaction {
@@ -118,30 +144,35 @@ classDiagram
         +toCsvLine()
     }
 
-    class AuthService {
-        +register(...)
-        +login(...)
+    class AccountType {
+        <<enumeration>>
+        CORRENTE
+        POUPANCA
+        SALARIO
+    }
+
+    class OperationResult {
+        +boolean success
+        +String code
+        +String message
+        +List~String~ details
     }
 
     class CsvExporter {
         +exportTransactions(list,path)
     }
 
-    class App {
-        +main()
-        +doRegister()
-        +doLogin()
-        +bankMenu()
-    }
-
-    Account <|-- CheckingAccount
+    App --> AuthController
+    App --> AccountController
+    AuthController --> AuthService
+    AuthService --> Bank
+    AccountController --> Bank
+    AccountController --> CsvExporter
     Bank o-- Account
     Bank o-- Transaction
-    App --> AuthService
-    App --> Bank
-    AuthService --> Bank
+    Account <|-- CheckingAccount
+    Account "1" o-- "1" AccountType
     CsvExporter ..> Transaction
-
 ```
 
 ## Diagrama de sequência (Transferência)
@@ -150,48 +181,31 @@ classDiagram
 sequenceDiagram
     participant U as Usuário
     participant App as Aplicação (CLI)
-    participant Auth as AuthService
+    participant AC as AuthController
+    participant C as AccountController
+    participant S as AuthService
     participant B as Bank
     participant From as ContaOrigem
     participant To as ContaDestino
 
-    U->>App: solicita transferência (agência, nº origem, nº destino, valor, senha)
-    App->>Auth: (opcional) valida credenciais / session
-    App->>B: transfer(from, to, amount, password)
+    U->>App: inicia fluxo de transferência
+    App->>C: solicita transferência (nº origem, nº destino, valor, senha)
+    C->>S: validar sessão / credenciais (opcional)
+    C->>B: transfer(from, to, amount, password)
     B->>From: checkPassword(password)
-    alt senha inválida
-        From-->>B: senha inválida
-        B-->>App: fail (INVALID_PASSWORD)
-        App-->>U: "Senha incorreta"
-    else senha ok
-        B->>B: checkHourlyCap(amount)
-        alt bloqueado por horário
-            B-->>App: fail (HOURLY_CAP)
-            App-->>U: "Transferências > 1000.00 entre 00:00–06:00 são bloqueadas"
-        else horário ok
-            B->>From: checkLimit(amount)
-            alt acima do limite
-                From-->>B: limite excedido
-                B-->>App: fail (LIMIT_EXCEEDED)
-                App-->>U: "Valor acima do limite por operação"
-            else dentro do limite
-                B->>From: checkBalance(amount)
-                alt saldo insuficiente
-                    From-->>B: saldo insuficiente
-                    B-->>App: fail (INSUFFICIENT_FUNDS)
-                    App-->>U: "Saldo insuficiente"
-                else suficiente
-                    B->>From: withdraw(amount)
-                    B->>To: deposit(amount)
-                    B->>B: add Transaction("TRANSFER")
-                    B->>B: add Transaction("TRANSFER_IN")
-                    B-->>App: ok (Transferência realizada)
-                    App-->>U: "Transferência realizada. Saldo atual: X"
-                end
-            end
-        end
+    B->>B: executar validações (saldo, limite, horário, existência destino, auto-transfer)
+    alt validações falham
+        B-->>C: OperationResult(success=false, details=[...])
+        C-->>App: exibe lista de erros agrupados ao usuário
+    else validações OK
+        B->>From: withdraw(amount)
+        B->>To: deposit(amount)
+        B->>B: add Transaction("TRANSFER")
+        B->>B: add Transaction("TRANSFER_IN")
+        B-->>C: OperationResult(success=true, message="Transferência realizada")
+        C-->>App: mostra sucesso e saldo atualizado
     end
-
 ```
 
 ------------------------------------------------------------
+
