@@ -70,14 +70,21 @@ public class Bank {
         if (aFrom == null) return OperationResult.fail("FROM_NOT_FOUND", "Conta de origem não encontrada.");
         if (aTo == null) return OperationResult.fail("TO_NOT_FOUND", "Conta destino não encontrada.");
         if (!aFrom.checkPassword(password)) return OperationResult.fail("INVALID_PASSWORD", "Senha inválida.");
-        if (amount <= 0) return OperationResult.fail("INVALID_AMOUNT", "Valor de transferência deve ser maior que zero.");
+
+        List<String> details = new ArrayList<>();
+        if (amount <= 0) details.add("Valor de transferência deve ser maior que zero.");
         LocalTime now = LocalTime.now();
         if (now.getHour() >= 0 && now.getHour() < 6) {
             double cap = 1000.0;
-            if (amount > cap) return OperationResult.fail("HOURLY_CAP", "Transferências acima de 1000.00 não são permitidas entre 00:00 e 06:00.");
+            if (amount > cap) details.add("Transferências acima de 1000.00 não são permitidas entre 00:00 e 06:00.");
         }
-        if (aFrom.getLimit() >= 0 && amount > aFrom.getLimit()) return OperationResult.fail("LIMIT_EXCEEDED", "Valor acima do limite por operação.");
-        if (amount > aFrom.getBalance()) return OperationResult.fail("INSUFFICIENT_FUNDS", "Saldo insuficiente.");
+        if (aFrom.getLimit() >= 0 && amount > aFrom.getLimit()) details.add("Valor acima do limite por operação.");
+        if (amount > aFrom.getBalance()) details.add("Saldo insuficiente.");
+
+        if (!details.isEmpty()) {
+            return OperationResult.fail("VALIDATION_ERRORS", "Erros de validação na transferência.", details);
+        }
+
         if (!aFrom.withdraw(amount)) return OperationResult.fail("WITHDRAW_FAILED", "Falha ao debitar da conta de origem.");
         aTo.deposit(amount);
         transactions.add(new Transaction(LocalDateTime.now(), "TRANSFER", amount, fromAccount, toAccount, aFrom.getBalance(), "Transferência"));
