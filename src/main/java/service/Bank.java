@@ -10,23 +10,53 @@ import java.util.Map;
 import model.Account;
 import model.CheckingAccount;
 import model.Transaction;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import persistence.PersistenceService;
 import util.OperationResult;
 
+@Service
 public class Bank {
     private Map<Integer, Account> accounts = new HashMap<>();
     private List<Transaction> transactions = new ArrayList<>();
     private int nextAccountNumber = 1001;
+    private PersistenceService persistenceService;
+
+    public Bank() {
+    }
+
+    @Autowired
+    public Bank(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
 
     public synchronized Account createAccount(String agency, String client, double initialDeposit, double limit, model.AccountType type, String password) {
         int accNum = nextAccountNumber++;
         Account acc = new CheckingAccount(accNum, agency, client, initialDeposit, limit, type, password);
         accounts.put(accNum, acc);
-        transactions.add(new Transaction(LocalDateTime.now(), "CREATE", initialDeposit, null, accNum, acc.getBalance(), "Criação de conta"));
+        Transaction t = new Transaction(LocalDateTime.now(), "CREATE", initialDeposit, null, accNum, acc.getBalance(), "Criação de conta");
+        transactions.add(t);
+        if (persistenceService != null) {
+            persistenceService.saveOrUpdateAccount(acc);
+            persistenceService.saveTransaction(t);
+        }
         return acc;
     }
 
+    public synchronized void addExistingAccount(Account acc) {
+        if (acc == null) return;
+        int num = acc.getAccountNumber();
+        accounts.put(num, acc);
+        if (num >= nextAccountNumber) nextAccountNumber = num + 1;
+    }
+
     public Account find(int accountNumber) {
-        return accounts.get(accountNumber);
+        Account acc = accounts.get(accountNumber);
+        if (acc == null && persistenceService != null) {
+            acc = persistenceService.loadAccountDomain(accountNumber);
+            if (acc != null) addExistingAccount(acc);
+        }
+        return acc;
     }
 
     public OperationResult deposit(int accountNumber, double amount) {
@@ -34,7 +64,12 @@ public class Bank {
         if (acc == null) return OperationResult.fail("ACCOUNT_NOT_FOUND", "Conta não encontrada.");
         if (amount <= 0) return OperationResult.fail("INVALID_AMOUNT", "Valor de depósito deve ser maior que zero.");
         acc.deposit(amount);
-        transactions.add(new Transaction(LocalDateTime.now(), "DEPOSIT", amount, null, accountNumber, acc.getBalance(), "Depósito"));
+        Transaction t = new Transaction(LocalDateTime.now(), "DEPOSIT", amount, null, accountNumber, acc.getBalance(), "Depósito");
+        transactions.add(t);
+        if (persistenceService != null) {
+            persistenceService.saveOrUpdateAccount(acc);
+            persistenceService.saveTransaction(t);
+        }
         return OperationResult.ok(String.format("Depósito realizado. Saldo atual: %.2f", acc.getBalance()));
     }
 
@@ -47,7 +82,12 @@ public class Bank {
         if (amount > acc.getBalance()) return OperationResult.fail("INSUFFICIENT_FUNDS", "Saldo insuficiente.");
         boolean ok = acc.withdraw(amount);
         if (ok) {
-            transactions.add(new Transaction(LocalDateTime.now(), "WITHDRAW", amount, accountNumber, null, acc.getBalance(), "Saque"));
+            Transaction t = new Transaction(LocalDateTime.now(), "WITHDRAW", amount, accountNumber, null, acc.getBalance(), "Saque");
+            transactions.add(t);
+            if (persistenceService != null) {
+                persistenceService.saveOrUpdateAccount(acc);
+                persistenceService.saveTransaction(t);
+            }
             return OperationResult.ok(String.format("Saque realizado. Saldo atual: %.2f", acc.getBalance()));
         }
         return OperationResult.fail("UNKNOWN", "Falha ao realizar saque.");
@@ -59,7 +99,12 @@ public class Bank {
         if (!acc.checkPassword(password)) return OperationResult.fail("INVALID_PASSWORD", "Senha inválida.");
         if (newLimit < 0) return OperationResult.fail("INVALID_LIMIT", "Limite não pode ser negativo.");
         acc.setLimit(newLimit);
-        transactions.add(new Transaction(LocalDateTime.now(), "LIMIT_CHANGE", 0.0, accountNumber, null, acc.getBalance(), "Alteração de limite"));
+        Transaction t = new Transaction(LocalDateTime.now(), "LIMIT_CHANGE", 0.0, accountNumber, null, acc.getBalance(), "Alteração de limite");
+        transactions.add(t);
+        if (persistenceService != null) {
+            persistenceService.saveOrUpdateAccount(acc);
+            persistenceService.saveTransaction(t);
+        }
         return OperationResult.ok(String.format("Limite atualizado para: %.2f", newLimit));
     }
 
@@ -87,8 +132,16 @@ public class Bank {
 
         if (!aFrom.withdraw(amount)) return OperationResult.fail("WITHDRAW_FAILED", "Falha ao debitar da conta de origem.");
         aTo.deposit(amount);
-        transactions.add(new Transaction(LocalDateTime.now(), "TRANSFER", amount, fromAccount, toAccount, aFrom.getBalance(), "Transferência"));
-        transactions.add(new Transaction(LocalDateTime.now(), "TRANSFER_IN", amount, fromAccount, toAccount, aTo.getBalance(), "Transferência recebida"));
+        Transaction t1 = new Transaction(LocalDateTime.now(), "TRANSFER", amount, fromAccount, toAccount, aFrom.getBalance(), "Transferência");
+        Transaction t2 = new Transaction(LocalDateTime.now(), "TRANSFER_IN", amount, fromAccount, toAccount, aTo.getBalance(), "Transferência recebida");
+        transactions.add(t1);
+        transactions.add(t2);
+        if (persistenceService != null) {
+            persistenceService.saveOrUpdateAccount(aFrom);
+            persistenceService.saveOrUpdateAccount(aTo);
+            persistenceService.saveTransaction(t1);
+            persistenceService.saveTransaction(t2);
+        }
         return OperationResult.ok(String.format("Transferência realizada. Saldo atual: %.2f", aFrom.getBalance()));
     }
 
@@ -98,5 +151,19 @@ public class Bank {
 
     public List<Account> listAccounts() {
         return new ArrayList<>(accounts.values());
+    }
+
+    public OperationResult deleteAccount(int accountNumber, String password) {
+        Account acc = accounts.get(accountNumber);
+        if (acc == null) return OperationResult.fail("ACCOUNT_NOT_FOUND", "Conta não encontrada.");
+        if (!acc.checkPassword(password)) return OperationResult.fail("INVALID_PASSWORD", "Senha inválida.");
+        accounts.remove(accountNumber);
+        Transaction t = new Transaction(LocalDateTime.now(), "DELETE", 0.0, null, accountNumber, acc.getBalance(), "Exclusão de conta");
+        transactions.add(t);
+        if (persistenceService != null) {
+            persistenceService.deleteAccount(accountNumber);
+            persistenceService.saveTransaction(t);
+        }
+        return OperationResult.ok("Conta removida com sucesso.");
     }
 }

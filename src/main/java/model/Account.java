@@ -1,6 +1,7 @@
 package model;
 
 import java.text.DecimalFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public abstract class Account {
     protected int accountNumber;
@@ -38,9 +39,22 @@ public abstract class Account {
     }
 
     public boolean checkPassword(String candidate) {
+        if (candidate == null) return false;
         if (password == null) return false;
+        try {
+            if (password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$")) {
+                org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder enc = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+                return enc.matches(candidate, password);
+            }
+        } catch (NoClassDefFoundError | Exception ex) {
+        }
         return password.equals(candidate);
     }
+
+    @JsonIgnore
+    public String getPassword() { return password; }
+
+    public void setPassword(String password) { this.password = password; }
 
     public String summary() {
         DecimalFormat df = new DecimalFormat("#.00");

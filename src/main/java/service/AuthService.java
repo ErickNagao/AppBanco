@@ -1,7 +1,9 @@
 package service;
 
 import model.Account;
+import org.springframework.stereotype.Service;
 
+@Service
 public class AuthService {
     private Bank bank;
 

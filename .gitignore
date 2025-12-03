@@ -1,3 +1,19 @@
+# Maven / Java
+/target/
+/bin/
+.project
+.classpath
+.settings/
+.idea/
+.vscode/
+
+# OS files
+Thumbs.db
+ehthumbs.db
+.DS_Store
+
+# H2 database files
+/data/
 # Build output
 /bin/
 *.class
