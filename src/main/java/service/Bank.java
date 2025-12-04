@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import model.Account;
 import model.CheckingAccount;
@@ -146,6 +147,15 @@ public class Bank {
     }
 
     public List<Transaction> getTransactions() {
+        if (persistenceService != null) {
+            try {
+                return persistenceService.listTransactions().stream()
+                        .map(e -> new Transaction(e.getTimestamp(), e.getType(), e.getAmount(), e.getFromAccount(), e.getToAccount(), e.getBalanceAfter(), e.getDescription()))
+                        .collect(Collectors.toList());
+            } catch (Exception ex) {
+                return transactions;
+            }
+        }
         return transactions;
     }
 

@@ -1,205 +1,219 @@
+# AppBanco — Aplicação bancária
 
-Projeto exemplo de uma API bancária em Spring Boot com documentação OpenAPI (Swagger) e persistência via H2 (file-based). O objetivo deste repositório é expor operações bancárias (criação de conta, login, depósito, saque, transferência, alteração de limite, exportação de transações) para consumo por frontends ou times consumidores.
+Aplicação didática em Java que implementa operações bancárias básicas e as expõe via endpoints REST para consumo por frontends. O repositório contém a versão original por CLI (v1.1.0) e a versão RESTful (Atual) com persistência JPA/Hibernate e documentação OpenAPI (Swagger).
 
-**Estrutura do projeto**
-- `pom.xml` — configuração Maven.
-- `src/main/java` — código-fonte (pacotes: `app`, `service`, `persistence`, `model`, `util`).
-- `src/main/resources` — `application.properties` e demais recursos.
+---
 
-**Pré-requisitos**
-- Java 11 ou superior
+## Funcionalidades principais
+
+- Cadastro de conta com: `agency` (string numérica), `accountNumber` (gerado), `client`, `initialDeposit`, `limit`, `type` (enum: `CORRENTE`, `POUPANCA`, `SALARIO`) e `password`.
+- Autenticação simples via `POST /api/auth/login`.
+
+## Rápido (Quickstart)
+
+Pré-requisitos
+- Java 11+
 - Maven 3.x
 
-**Executando localmente**
-1. No diretório do projeto:
+Rodando em desenvolvimento (PowerShell):
 
 ```powershell
 mvn -DskipTests spring-boot:run
 ```
 
-2. Endpoints úteis (após iniciar):
-- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+Gerar JAR e executar:
+
+```powershell
+mvn -DskipTests package
+java -jar target\\appbanco-1.0.0-SNAPSHOT.jar
+```
+
+
+URLs úteis (porta padrão `8080`)
+- Frontend estático: `http://localhost:8080/`
+- Swagger UI (OpenAPI): `http://localhost:8080/swagger-ui/index.html`
 - H2 Console: `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:file:./data/appbanco-db;DB_CLOSE_ON_EXIT=FALSE`, usuário `sa`, senha vazia)
 
-**Formato de erro padrão**
-Respostas de erro seguem um formato consistente. Exemplo de validação com múltiplos erros:
+---
 
+## Frontend (curto)
+
+Há um frontend estático pronto em `src/main/resources/static` (arquivos `index.html`, `app.js`, `styles.css`). Ao iniciar a aplicação, abra `http://localhost:8080/` para usar a interface — ela consome os endpoints sob `/api` e permite criar conta, fazer login, depositar, sacar, transferir, listar contas e exportar o histórico.
+
+---
+
+## Funcionalidades principais
+
+- Criar conta (agência, cliente, depósito inicial, limite, tipo, senha)
+- Login por agência + número da conta
+- Consultar contas
+- Depósito
+- Saque (requer senha)
+- Alterar limite (requer senha)
+- Transferência entre contas (requer senha; validações de saldo/limite; bloqueio horário para valores altos)
+- Histórico de transações e exportação CSV
+- Deletar a conta
+- Frontend estático para operações básicas
+
+---
+
+## Estrutura rápida do código
+
+- `src/main/java/app` — bootstrap e configuração OpenAPI
+- `src/main/java/app/rest` — controllers e DTOs de request/response
+- `src/main/java/service` — regras de negócio (`Bank`, `AuthService`)
+- `src/main/java/persistence` — entidades JPA e `PersistenceService`
+- `src/main/resources/static` — frontend estático (`index.html`, `app.js`, `styles.css`)
+- `src/main/resources/application.properties` — configurações (H2, JPA, etc.)
+
+---
+
+## Endpoints principais (resumo)
+
+> Para documentação detalhada e exemplos, abra o Swagger UI em execução.
+
+- `POST /api/accounts` — Criar conta
+  - Exemplo request:
 ```json
-{
-  "code": "INVALID_REQUEST",
-  "message": "Validation failed",
-  "errors": [
-	{ "field": "agency", "message": "Agency deve conter apenas números" },
-	{ "field": "initialDeposit", "message": "Initial deposit deve ser um número" }
-  ]
-}
+{ "agency":"001", "client":"João Silva", "initialDeposit":"100.0", "limit":"500.0", "type":"CORRENTE", "password":"senha123" }
 ```
+- `POST /api/auth/login` — Login
+  - `{ "agency":"001","accountNumber":"1001","password":"senha123" }`
+- `GET /api/accounts` — Listar contas
+- `POST /api/accounts/{accountNumber}/deposit` — Depositar `{ "amount": 100.0 }`
+- `POST /api/accounts/{accountNumber}/withdraw` — Sacar `{ "amount": 50.0, "password": "senha" }`
+- `POST /api/accounts/{accountNumber}/change-limit` — Alterar limite `{ "newLimit": "1500.0", "password": "senha" }`
+- `DELETE /api/accounts/{accountNumber}?password=...` — Deletar conta
+- `POST /api/transfer` — Transferência
+  - `{ "fromAccount":1001, "toAccount":1002, "amount":250.0, "password":"senha123" }`
+- `GET /api/transactions` — Histórico (REST retorna tipos relacionados a transfers)
+- `GET /api/transactions/export` — Exportar CSV (download `transfers.csv`)
 
-- Quando o erro envolver um valor enumerado (por exemplo o `type` da conta), a resposta pode incluir `validValues` com as opções aceitas.
+---
 
-**Endpoints principais**
-- `POST /api/accounts` — criar conta
-- `POST /api/auth/login` — login
-- `POST /api/accounts/{id}/deposit` — depositar
-- `POST /api/accounts/{id}/withdraw` — sacar
-- `POST /api/transfer` — transferir
-- `POST /api/accounts/{id}/change-limit` — alterar limite (validação: `newLimit` deve ser número > 0)
-- `DELETE /api/accounts/{id}` — deletar conta (query param `password`)
-- `GET /api/accounts` — listar contas
-- `GET /api/transactions` — listar histórico de transferências (só `TRANSFER` e `TRANSFER_IN`)
-- `GET /api/transactions/export` — exportar transferências como CSV (download `transfers.csv`)
+## Modelos importantes (resumido)
 
-Para detalhes de cada endpoint, parâmetros e exemplos, consulte o Swagger UI em tempo de execução.
+- `AccountResponse`: `accountNumber`, `agency`, `client`, `balance`, `limit`, `type`
+- `TransactionResponse`: `timestamp`, `type`, `amount`, `fromAccount`, `toAccount`, `balanceAfter`, `description`
 
-**Exemplos (PowerShell / curl)**
+Observação: internamente a entidade JPA usa `limitValue`; os endpoints retornam `limit`.
 
-- Criar conta (exemplo amigável):
+---
 
-```powershell
-curl -Method POST http://localhost:8080/api/accounts \
-	-Headers @{ 'Content-Type' = 'application/json' } \
-	-Body '{"agency":"001","client":"João Silva","initialDeposit":"100.0","limit":"500.0","type":"CORRENTE","password":"senha123"}'
-```
+## Persistência e backup
 
-- Login:
+- Banco em H2 (file) por padrão: arquivos em `data/` (ex.: `data/appbanco-db.mv.db`).
+- Configuração em `src/main/resources/application.properties`.
+- Para backup, copie os arquivos `data/appbanco-db.*` antes de remover a pasta `data/`.
 
-```powershell
-curl -Method POST http://localhost:8080/api/auth/login \
-	-Headers @{ 'Content-Type' = 'application/json' } \
-	-Body '{"agency":"001","accountNumber":"1001","password":"senha123"}'
-```
+---
 
-- Depositar:
+## Testes manuais sugeridos
 
-```powershell
-curl -Method POST http://localhost:8080/api/accounts/1001/deposit \
-	-Headers @{ 'Content-Type' = 'application/json' } \
-	-Body '{"amount":100.0}'
-```
+1. Criar duas contas via `POST /api/accounts` (usar Swagger ou curl).
+2. Fazer login (`POST /api/auth/login`) para verificar retorno de dados.
+3. Depositar e sacar em uma conta; verificar saldo retornado.
+4. Realizar transferência entre contas; verificar histórico e exportar CSV.
 
-- Sacar:
+---
 
-```powershell
-curl -Method POST http://localhost:8080/api/accounts/1001/withdraw \
-	-Headers @{ 'Content-Type' = 'application/json' } \
-	-Body '{"amount":50.0, "password":"senha123"}'
-```
+## Diagramas
 
-- Transferir:
+Abaixo dois diagramas Mermaid que representam a arquitetura e o fluxo principal (transferência). Eles foram adaptados para a estrutura atual do projeto.
 
-```powershell
-curl -Method POST http://localhost:8080/api/transfer \
-	-Headers @{ 'Content-Type' = 'application/json' } \
-	-Body '{"fromAccount":1001,"toAccount":1002,"amount":200.0,"password":"senha123"}'
-```
-
-- Alterar limite (novo limite como string):
-
-```powershell
-curl -Method POST http://localhost:8080/api/accounts/1001/change-limit \
-	-Headers @{ 'Content-Type' = 'application/json' } \
-	-Body '{"newLimit":"1500.00","password":"senha123"}'
-```
-
-- Deletar conta (query param `password`):
-
-```powershell
-curl -Method DELETE "http://localhost:8080/api/accounts/1001?password=senha123"
-```
-
-- Exportar transferências (salvar arquivo CSV):
-
-```powershell
-curl -Method GET http://localhost:8080/api/transactions/export -OutFile transfers.csv
-```
-
-**Banco de dados (H2) e persistência**
-- O projeto usa H2 em modo file (`jdbc:h2:file:./data/appbanco-db`) para persistência local entre reinícios.
-- Configuração em `src/main/resources/application.properties`:
-
-```
-spring.datasource.url=jdbc:h2:file:./data/appbanco-db;DB_CLOSE_ON_EXIT=FALSE
-spring.jpa.hibernate.ddl-auto=update
-```
-
-- Se você apagar a pasta `data/`, os arquivos do H2 serão recriados automaticamente na próxima inicialização da aplicação; porém os dados antigos serão perdidos. Faça backup antes se precisar preservar dados.
-
-Recomendações de backup/reset:
-- Fazer backup dos arquivos `data/appbanco-db.*` ou usar o endpoint `GET /api/transactions/export` antes de apagar o diretório `data/`.
-- Para reset rápido (local): pare a aplicação, apague `data/`, e execute `mvn -DskipTests spring-boot:run`.
- 
-## Diagramas e Arquitetura
-
-Abaixo estão diagramas atualizados (Mermaid) que representam a arquitetura, o modelo de dados e o fluxo principal de uma transferência. Estes diagramas foram adaptados para refletir as entidades `AccountEntity` e `TransactionEntity` e os controllers/services atuais.
-
-**Diagrama de Componentes (Arquitetura)**
+Diagrama de classes (Mermaid):
 
 ```mermaid
-graph LR
-	FE[Front-end / Cliente] -->|HTTP JSON| Controllers[Controllers (REST)]
-	Controllers --> Services[Services (Bank, AuthService)]
-	Services --> Persistence[PersistenceService / Repositories]
-	Persistence --> H2[(H2 - arquivo ./data/appbanco-db)]
-	Controllers -->|OpenAPI| Swagger[Swagger UI]
+classDiagram
+  class Frontend {
+    +index.html
+    +app.js
+  }
+
+  class AccountsController {
+    +create()
+    +deposit()
+    +withdraw()
+    +changeLimit()
+    +delete()
+  }
+
+  class AuthController {
+    +login()
+  }
+
+  class TransactionsController {
+    +list()
+    +exportCsv()
+  }
+
+  class Bank {
+    +createAccount()
+    +find()
+    +deposit()
+    +withdraw()
+    +transfer()
+    +getTransactions()
+  }
+
+  class PersistenceService {
+    +saveAccount()
+    +saveTransaction()
+    +loadAccounts()
+  }
+
+  class Account {
+    +accountNumber
+    +agency
+    +client
+    +balance
+    +limit
+    +type
+  }
+
+  class Transaction {
+    +timestamp
+    +type
+    +amount
+    +fromAccount
+    +toAccount
+    +balanceAfter
+  }
+
+  Frontend --> AccountsController
+  Frontend --> AuthController
+  Frontend --> TransactionsController
+  AccountsController --> Bank
+  AuthController --> Bank
+  TransactionsController --> Bank
+  Bank --> PersistenceService
+  PersistenceService o-- Account
+  PersistenceService o-- Transaction
+  Bank o-- Account
+  Bank o-- Transaction
 ```
 
-**Diagrama ER (entidades principais)**
-
-```mermaid
-erDiagram
-		ACCOUNT {
-			Integer accountNumber PK
-			String agency
-			String client
-			double balance
-			double limitValue
-			String type
-		}
-		TRANSACTION {
-			Long id PK
-			LocalDateTime timestamp
-			String type
-			double amount
-			Integer fromAccount FK
-			Integer toAccount FK
-			double balanceAfter
-			String description
-		}
-		ACCOUNT ||--o{ TRANSACTION : has
-```
-
-**Sequência: Fluxo de uma Transferência**
+Diagrama de sequência (Transferência):
 
 ```mermaid
 sequenceDiagram
-	participant FE as Front-end
-	participant C as TransactionsController
-	participant S as Bank (service)
-	participant P as PersistenceService
-	FE->>C: POST /api/transfer {fromAccount,toAccount,amount,password}
-	C->>S: bank.transfer(from,to,amount,password)
-	S->>S: valida regras (saldo, limite, horário)
-	alt validação falha
-		S-->>C: OperationResult.fail(...) (código + mensagens)
-		C-->>FE: 4xx + corpo de erro
-	else valida ok
-		S->>aFrom: withdraw(amount)
-		S->>aTo: deposit(amount)
-		S->>P: saveOrUpdateAccount(aFrom)
-		S->>P: saveOrUpdateAccount(aTo)
-		S->>P: saveTransaction(t1); saveTransaction(t2)
-		S-->>C: OperationResult.ok(...)
-		C-->>FE: 200 OK (mensagem)
-	end
+  participant U as Usuário / Frontend
+  participant API as AccountsController / TransactionsController
+  participant B as Bank
+  participant P as PersistenceService
+
+  U->>API: solicita transferência (from, to, amount, password)
+  API->>B: transfer(from,to,amount,password)
+  B->>B: validar senha, saldo, limite, horário
+  alt validações falham
+    B-->>API: resultado erro (code/message)
+    API-->>U: exibe erro
+  else validações OK
+    B->>B: debitar conta origem
+    B->>B: creditar conta destino
+    B->>P: saveTransaction(TRANSFER)
+    B->>P: saveTransaction(TRANSFER_IN)
+    B-->>API: resultado sucesso
+    API-->>U: confirma transferência
+  end
 ```
-
-**Glossário rápido de tipos de transação**
-- `CREATE` — criação de conta (apenas histórico de criação)
-- `DEPOSIT` — depósito
-- `WITHDRAW` — saque
-- `TRANSFER` — transferência (saída)
-- `TRANSFER_IN` — transferência recebida (entrada)
-- `LIMIT_CHANGE` — alteração de limite
-- `DELETE` — exclusão de conta (registro histórico)
-
-
