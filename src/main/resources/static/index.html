@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AppBanco - Frontend</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <h1>AppBanco — Banco Simples</h1>
+    <p>Uma interface leve para testar e interagir com a API REST do AppBanco. Use as opções abaixo para criar uma conta, entrar na sua conta e executar operações bancárias básicas (depósito, saque, transferência e exportação de histórico).</p>
+  </header>
+  <div id="globalMessage" class="card hidden" style="margin-top:12px"></div>
+
+  <main>
+    <div id="initialView" class="card center">
+      <h2>Bem-vindo</h2>
+      <p>Escolha uma opção para continuar</p>
+      <div class="actions">
+        <button id="btnShowCreate">Cadastrar</button>
+        <button id="btnShowLogin">Logar</button>
+      </div>
+    </div>
+
+    <section id="createView" class="card hidden">
+      <h2>Cadastrar Conta</h2>
+      <form id="createAccountForm">
+        <label>Agência: <input name="agency"></label>
+        <small class="hint">Ex: 1000</small>
+        <label>Cliente: <input name="client"></label>
+        <small class="hint">Ex: João Silva</small>
+        <label>Depósito Inicial: <input name="initialDeposit"></label>
+        <small class="hint">Ex: 100.00</small>
+        <label>Limite: <input name="limit"></label>
+        <small class="hint">Ex: 500.00</small>
+        <label>Tipo: <select name="type">
+          <option value="" disabled selected>Selecione...</option>
+          <option value="CORRENTE">CORRENTE</option>
+          <option value="POUPANCA">POUPANCA</option>
+          <option value="SALARIO">SALARIO</option>
+        </select></label>
+        <small class="hint">Escolha o tipo de conta</small>
+        <label>Senha: <input name="password" type="password"></label>
+        <small class="hint">Ex: senha123 (apenas exemplo)</small>
+        <div class="form-actions">
+          <button type="submit">Criar</button>
+          <button type="button" id="btnBackFromCreate">Voltar</button>
+        </div>
+      </form>
+      <pre id="createAccountResult" class="result"></pre>
+    </section>
+
+    <section id="loginView" class="card hidden">
+      <h2>Login</h2>
+      <form id="loginForm">
+        <label>Agência: <input name="agency"></label>
+        <small class="hint">Ex: 001</small>
+        <label>Número da Conta: <input name="accountNumber"></label>
+        <small class="hint">Ex: 1001</small>
+        <label>Senha: <input name="password" type="password"></label>
+        <small class="hint">Sua senha</small>
+        <div class="form-actions">
+          <button type="submit">Entrar</button>
+          <button type="button" id="btnBackFromLogin">Voltar</button>
+        </div>
+      </form>
+      <pre id="loginResult" class="result"></pre>
+    </section>
+
+    <section id="accountView" class="card hidden">
+      <h2>Menu da Conta - <span id="accountLabel"></span></h2>
+
+      <nav class="account-menu">
+        <button data-op="op-balance" class="op-btn">Ver saldo</button>
+        <button data-op="op-deposit" class="op-btn">Depositar</button>
+        <button data-op="op-withdraw" class="op-btn">Sacar</button>
+        <button data-op="op-change-limit" class="op-btn">Alterar limite</button>
+        <button data-op="op-transfer" class="op-btn">Transferir</button>
+        <button data-op="op-list-accounts" class="op-btn">Listar contas</button>
+        <button data-op="op-export" class="op-btn">Exportar CSV</button>
+        <button data-op="op-delete" class="op-btn">Deletar conta</button>
+        <button id="btnLogout" class="op-btn">Logout</button>
+      </nav>
+
+      <div class="account-ops">
+        <div id="op-deposit" class="op hidden">
+          <h3>Depositar</h3>
+          <form id="depositForm">
+            <label>Valor: <input name="amount"></label>
+            <small class="hint">Ex: 100.00</small>
+            <button type="submit">Depositar</button>
+          </form>
+          <pre id="depositResult" class="result"></pre>
+        </div>
+
+        <div id="op-withdraw" class="op hidden">
+          <h3>Sacar</h3>
+          <form id="withdrawForm">
+            <label>Valor: <input name="amount"></label>
+            <small class="hint">Ex: 50.00</small>
+            <label>Senha: <input name="password" type="password"></label>
+            <small class="hint">Sua senha</small>
+            <button type="submit">Sacar</button>
+          </form>
+          <pre id="withdrawResult" class="result"></pre>
+        </div>
+
+        <div id="op-change-limit" class="op hidden">
+          <h3>Alterar Limite</h3>
+          <form id="changeLimitForm">
+            <label>Novo limite: <input name="newLimit"></label>
+            <small class="hint">Ex: 1500.00</small>
+            <label>Senha: <input name="password" type="password"></label>
+            <small class="hint">Sua senha</small>
+            <button type="submit">Alterar</button>
+          </form>
+          <pre id="changeLimitResult" class="result"></pre>
+        </div>
+
+        <div id="op-transfer" class="op hidden">
+          <h3>Transferência</h3>
+          <form id="transferForm">
+            <label>Para (conta): <input name="toAccount"></label>
+            <small class="hint">Ex: 1002</small>
+            <label>Valor: <input name="amount"></label>
+            <small class="hint">Ex: 10.00</small>
+            <label>Senha: <input name="password" type="password"></label>
+            <small class="hint">Sua senha</small>
+            <button type="submit">Transferir</button>
+          </form>
+          <pre id="transferResult" class="result"></pre>
+        </div>
+
+        <div id="op-export" class="op hidden">
+          <h3>Exportar histórico (CSV)</h3>
+          <button id="btnExportCsv">Exportar CSV</button>
+        </div>
+
+        <div id="op-list-accounts" class="op hidden">
+          <h3>Listar contas</h3>
+          <button id="btnListAccounts">Listar</button>
+          <pre id="accountsList" class="result"></pre>
+        </div>
+
+        <div id="op-balance" class="op hidden">
+          <h3>Ver saldo atual</h3>
+          <button id="btnRefreshBalance">Atualizar saldo</button>
+          <pre id="balanceView" class="result"></pre>
+        </div>
+
+        <div id="op-delete" class="op hidden">
+          <h3>Deletar conta</h3>
+          <label>Senha: <input id="deletePassword" type="password"></label>
+          <small class="hint">Confirme sua senha antes de deletar</small>
+          <button id="btnDeleteAccount">Deletar conta</button>
+          <pre id="deleteResult" class="result"></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

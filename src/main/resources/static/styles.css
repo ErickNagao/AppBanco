@@ -1,0 +1,29 @@
+*{box-sizing:border-box;font-family:Segoe UI,Roboto,Arial}
+body{background:#f5f6f8;color:#222;margin:0;padding:18px}
+header h1{margin:0;font-size:20px}
+header p{margin:6px 0 16px;color:#444}
+main{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.card{background:#fff;padding:12px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card h2{margin-top:0}
+label{display:block;margin:6px 0}
+input,select,button{padding:6px;margin-left:6px}
+button{cursor:pointer}
+.result{background:#f0f4f8;padding:8px;border-radius:4px;max-height:240px;overflow:auto}
+.footer{margin-top:16px;color:#666}
+.hidden{display:none}
+.center{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.account-menu{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.account-menu .op-btn{padding:6px 8px}
+.op{margin-bottom:8px}
+.accounts-container{background:transparent;padding:6px;border-radius:6px}
+.accounts-table thead{background:#f0f4f8}
+.accounts-table th,.accounts-table td{padding:8px 12px;border-bottom:1px solid rgba(0,0,0,0.04)}
+.accounts-table th{font-weight:700}
+.accounts-table td{vertical-align:middle}
+.accounts-table tbody tr:hover{background:rgba(0,0,0,0.02)}
+.hint{display:block;margin:4px 0 8px;color:#666;font-size:0.9rem;margin-left:0}
+.result.success{background:#e8f7e9;border-left:4px solid #2e8b57;color:#103a12}
+.result.error{background:#fdecea;border-left:4px solid #d9534f;color:#4a1a16}
+#globalMessage{padding:10px;border-radius:6px}
+#globalMessage.success{background:#e8f7e9;border-left:4px solid #2e8b57;color:#103a12}
+#globalMessage.error{background:#fdecea;border-left:4px solid #d9534f;color:#4a1a16}
