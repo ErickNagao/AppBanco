@@ -1,16 +1,35 @@
 # AppBanco — Aplicação bancária
 
-Aplicação didática em Java que implementa operações bancárias básicas e as expõe via endpoints REST para consumo por frontends. O repositório contém a versão original por CLI (v1.1.0) e a versão RESTful (Atual) com persistência JPA/Hibernate e documentação OpenAPI (Swagger).
+Aplicação didática em Java que implementa operações bancárias básicas e as expõe via endpoints REST para consumo por frontends. O repositório contém a versão original por CLI (v1.1.0) e a versão RESTful (Atual) com persistência JPA/Hibernate, documentação OpenAPI (Swagger) e deployment em cloud (Railway) usando PostgreSQL.
+
+## Stack
+
+- Java 11
+- Spring Boot 2.7.12
+- Maven 3.8.x+
+- Swagger UI (documentação interativa)
+- PostgreSQL 16 (Railway) / 14+ (local)
+- Docker (multi-stage)
+- Railway (deploy)
 
 ---
 
 ## Rápido (Quickstart)
 
-Pré-requisitos
-- Java 11+
-- Maven 3.x
+Pré-requisitos principais (veja versões em "Stack")
+- Java (JDK compatível)
+- Maven
+- PostgreSQL (local) — produção usa PostgreSQL 16 na Railway
+- Docker (Opcional) 
 
-Rodando em desenvolvimento (PowerShell):
+Execução local (PostgreSQL)
+1. Defina as variáveis de ambiente (exemplo padrão local):
+  - `DB_HOST=127.0.0.1`
+  - `DB_PORT=5432`
+  - `DB_NAME=appbanco`
+  - `DB_USER=postgres`
+  - `DB_PASSWORD=postgres`
+2. Rodar em desenvolvimento:
 
 ```powershell
 mvn -DskipTests spring-boot:run
@@ -20,20 +39,25 @@ Gerar JAR e executar:
 
 ```powershell
 mvn -DskipTests package
-java -jar target\\appbanco-1.0.0-SNAPSHOT.jar
+java -jar target\appbanco-1.0.0-SNAPSHOT.jar
 ```
 
+Execução via Docker (build local)
+
+```powershell
+docker build -t appbanco:local .
+docker run -e DB_HOST=host.docker.internal -e DB_PORT=5432 -e DB_NAME=appbanco -e DB_USER=postgres -e DB_PASSWORD=postgres -p 8080:8080 appbanco:local
+```
 
 URLs úteis (porta padrão `8080`)
+
+**Execução Local:**
 - Frontend estático: `http://localhost:8080/`
 - Swagger UI (OpenAPI): `http://localhost:8080/swagger-ui/index.html`
-- H2 Console: `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:file:./data/appbanco-db;DB_CLOSE_ON_EXIT=FALSE`, usuário `sa`, senha vazia)
 
----
-
-## Frontend (curto)
-
-Há um frontend estático pronto em `src/main/resources/static` (arquivos `index.html`, `app.js`, `styles.css`). Ao iniciar a aplicação, abra `http://localhost:8080/` para usar a interface — ela consome os endpoints sob `/api` e permite criar conta, fazer login, depositar, sacar, transferir, listar contas e exportar o histórico.
+**Deploy em Nuvem (Railway):**
+- App/Frontend: `https://appbanco-production.up.railway.app/`
+- Swagger UI: `https://appbanco-production.up.railway.app/swagger-ui/index.html`
 
 ---
 
@@ -48,7 +72,6 @@ Há um frontend estático pronto em `src/main/resources/static` (arquivos `index
 - Transferência entre contas (requer senha; validações de saldo/limite; bloqueio horário para valores altos)
 - Histórico de transações e exportação CSV
 - Deletar a conta
-- Frontend estático para operações básicas
 
 ---
 
@@ -59,47 +82,34 @@ Há um frontend estático pronto em `src/main/resources/static` (arquivos `index
 - `src/main/java/service` — regras de negócio (`Bank`, `AuthService`)
 - `src/main/java/persistence` — entidades JPA e `PersistenceService`
 - `src/main/resources/static` — frontend estático (`index.html`, `app.js`, `styles.css`)
-- `src/main/resources/application.properties` — configurações (H2, JPA, etc.)
+- `src/main/resources/application.properties` — configurações de datasource (PostgreSQL) e OpenAPI
 
 ---
 
 ## Endpoints principais
 
-> Para documentação detalhada e exemplos, abra o Swagger UI em execução.
+> Para documentação detalhada e exemplos interativos, abra o **Swagger UI** em execução.
 
-- `POST /api/accounts` — Criar conta
-  - Exemplo request:
-```json
-{ "agency":"001", "client":"João Silva", "initialDeposit":"100.0", "limit":"500.0", "type":"CORRENTE", "password":"senha123" }
-```
-- `POST /api/auth/login` — Login
-  - `{ "agency":"001","accountNumber":"1001","password":"senha123" }`
-- `GET /api/accounts` — Listar contas
-- `POST /api/accounts/{accountNumber}/deposit` — Depositar `{ "amount": 100.0 }`
-- `POST /api/accounts/{accountNumber}/withdraw` — Sacar `{ "amount": 50.0, "password": "senha" }`
-- `POST /api/accounts/{accountNumber}/change-limit` — Alterar limite `{ "newLimit": "1500.0", "password": "senha" }`
-- `DELETE /api/accounts/{accountNumber}?password=...` — Deletar conta
-- `POST /api/transfer` — Transferência
-  - `{ "fromAccount":1001, "toAccount":1002, "amount":250.0, "password":"senha123" }`
-- `GET /api/transactions` — Histórico (REST retorna tipos relacionados a transfers)
-- `GET /api/transactions/export` — Exportar CSV (download `transfers.csv`)
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| `POST` | `/api/accounts` | Criar conta |
+| `POST` | `/api/auth/login` | Fazer login |
+| `GET` | `/api/accounts` | Listar todas as contas |
+| `POST` | `/api/accounts/{accountNumber}/deposit` | Depositar |
+| `POST` | `/api/accounts/{accountNumber}/withdraw` | Sacar (requer senha) |
+| `POST` | `/api/accounts/{accountNumber}/change-limit` | Alterar limite (requer senha) |
+| `DELETE` | `/api/accounts/{accountNumber}` | Deletar conta |
+| `POST` | `/api/transfer` | Transferência entre contas (requer senha) |
+| `GET` | `/api/transactions` | Histórico de transações |
+| `GET` | `/api/transactions/export` | Exportar histórico em CSV |
 
 ---
 
-## Persistência e backup
+## Persistência
 
-- Banco em H2 (file) por padrão: arquivos em `data/` (ex.: `data/appbanco-db.mv.db`).
-- Configuração em `src/main/resources/application.properties`.
-- Para backup, copie os arquivos `data/appbanco-db.*` antes de remover a pasta `data/`.
-
----
-
-## Testes manuais sugeridos
-
-1. Criar duas contas via `POST /api/accounts` (usar Swagger ou curl).
-2. Fazer login (`POST /api/auth/login`) para verificar retorno de dados.
-3. Depositar e sacar em uma conta; verificar saldo retornado.
-4. Realizar transferência entre contas; verificar histórico e exportar CSV.
+- Produção: PostgreSQL (Railway) — credenciais via variáveis de ambiente `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
+- Desenvolvimento local: PostgreSQL (recomendado) — use as mesmas variáveis acima apontando para sua instância local.
+- Configuração base em `src/main/resources/application.properties`.
 
 ---
 
