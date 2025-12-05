@@ -4,11 +4,6 @@ Aplicação didática em Java que implementa operações bancárias básicas e a
 
 ---
 
-## Funcionalidades principais
-
-- Cadastro de conta com: `agency` (string numérica), `accountNumber` (gerado), `client`, `initialDeposit`, `limit`, `type` (enum: `CORRENTE`, `POUPANCA`, `SALARIO`) e `password`.
-- Autenticação simples via `POST /api/auth/login`.
-
 ## Rápido (Quickstart)
 
 Pré-requisitos
@@ -68,7 +63,7 @@ Há um frontend estático pronto em `src/main/resources/static` (arquivos `index
 
 ---
 
-## Endpoints principais (resumo)
+## Endpoints principais
 
 > Para documentação detalhada e exemplos, abra o Swagger UI em execução.
 
@@ -91,15 +86,6 @@ Há um frontend estático pronto em `src/main/resources/static` (arquivos `index
 
 ---
 
-## Modelos importantes (resumido)
-
-- `AccountResponse`: `accountNumber`, `agency`, `client`, `balance`, `limit`, `type`
-- `TransactionResponse`: `timestamp`, `type`, `amount`, `fromAccount`, `toAccount`, `balanceAfter`, `description`
-
-Observação: internamente a entidade JPA usa `limitValue`; os endpoints retornam `limit`.
-
----
-
 ## Persistência e backup
 
 - Banco em H2 (file) por padrão: arquivos em `data/` (ex.: `data/appbanco-db.mv.db`).
@@ -119,7 +105,7 @@ Observação: internamente a entidade JPA usa `limitValue`; os endpoints retorna
 
 ## Diagramas
 
-Abaixo dois diagramas Mermaid que representam a arquitetura e o fluxo principal (transferência). Eles foram adaptados para a estrutura atual do projeto.
+Abaixo dois diagramas Mermaid que representam a arquitetura e o fluxo principal.
 
 Diagrama de classes (Mermaid):
 
